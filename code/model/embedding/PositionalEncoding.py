@@ -22,7 +22,7 @@ class PositionalEncoding(nn.Module):
                                        self.configs[3]))*(position / np.power(10000, 2 * (hid_j // 2) / self.num_hidden)) for hid_j in range(self.num_hidden)]
             return torch.stack(return_list, dim=0)
         sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(self.configs[4])]
-        # TODO FIxe the problem Here 
+        #  FIxe the problem Here 
 
         sinusoid_table = torch.stack(sinusoid_table, dim=0)
 

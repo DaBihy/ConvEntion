@@ -25,18 +25,18 @@ def get_f1_score(confusion_matrix, i):
     
     for j in range(len(confusion_matrix)):
         if (i == j):
-            # true positive: 真實為i，預測為i (confusion matrix 中的對角線項目)
+            # true positive
             TP += confusion_matrix[i, j]
             tmp = np.delete(confusion_matrix, i, 0)
             tmp = np.delete(tmp, j, 1)
-            # true negative: 真實不為i, 預測不為i (confusion matrix 中, row=col=i 以外的項目總合)
+            # true negative:
             TN += np.sum(tmp)
         else:
             if (confusion_matrix[i, j] != 0):
-                # false negative: 真實為i, 預測不為i (confusion matrix中, row i 上不為0的總數)
+                # false negative: 
                 FN += confusion_matrix[i, j]
             if (confusion_matrix[j, i] != 0):
-                # false positive: 真實不為i, 預測為i (confusion matrix中, col i 上不為0的總數)
+                # false positive
                 FP += confusion_matrix[j, i]
 
     recall = TP / (FN + TP)
@@ -71,9 +71,9 @@ def average_accuracy(matrix):
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', figureName='test', cmap=plt.cm.Blues):
     if normalize:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        print("Normalized confusion matrix")
-    else:
-        print('Confusion matrix, without normalization')
+        # print("Normalized confusion matrix")
+    # else:
+    #     print('Confusion matrix, without normalization')
 
     # print(cm)
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
@@ -87,7 +87,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
         plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
-    save_path = '/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/fineLogsAug-for-cal/'+figureName+'.png'
+    save_path = '/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/MC/'+figureName+'.png'
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
@@ -105,14 +105,15 @@ class SBERTFineTuner:
     def __init__(self, sbert: SBERT, num_classes: int,
                  train_dataloader: DataLoader, valid_dataloader: DataLoader,
                  lr: float = 1e-3, with_cuda: bool = True,
-                 cuda_devices=None, log_freq: int = 100, fold=0):
+                 cuda_devices=None, log_freq: int = 100, fold=0, modelId=0):
 
         cuda_condition = torch.cuda.is_available() and with_cuda
-        self.device = torch.device("cuda" if cuda_condition else "cpu")
-        self.writer = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/fineLogsAug-for-cal/Train-fold-{fold}')
-        self.writer1 = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/fineLogsAug-for-cal/Valid-fold-{fold}')
+        self.device = torch.device("cuda:1" if cuda_condition else "cpu")
+        self.writer = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/logs/Train-Model-{modelId}-fold-{fold}')
+        self.writer1 = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/logs/Valid-Model-{modelId}-fold-{fold}')
         self.fold = fold
         self.sbert = sbert
+        self.modelId = modelId
         gc.collect()
         torch.cuda.empty_cache()
         
@@ -135,7 +136,7 @@ class SBERTFineTuner:
 
         if with_cuda and torch.cuda.device_count() > 1:
             print("Using %d GPUs for model fine-tuning" % torch.cuda.device_count())
-            self.model = nn.DataParallel(self.model, device_ids=[0,1,2,3])
+            self.model = nn.DataParallel(self.model, device_ids=[1])
 
         self.train_dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
@@ -153,7 +154,7 @@ class SBERTFineTuner:
         self.log_freq = log_freq
 
 
-    def train(self, epoch, epochs, fold):
+    def train(self, epoch, epochs):
         train_loss = 0.0
         counter = 0
         total_correct = 0
@@ -200,9 +201,9 @@ class SBERTFineTuner:
 
         valid_loss, valid_OA, valid_kappa = self._validate()
         #self.scheduler.step(valid_loss)
-
-        np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/Outputs/targets_Train-fold-{fold}.npy', np.array(class_targets), allow_pickle=True)
-        np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/Outputs/logits_Train-fold-{fold}.npy', np.array(da_result), allow_pickle=True)
+        if epoch == epochs-1:
+            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/targets_Train-Model-{self.modelId}-fold-{self.fold}.npy', np.array(class_targets), allow_pickle=True)
+            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/logits_Train-Model-{self.modelId}-fold-{self.fold}.npy', np.array(da_result), allow_pickle=True)
         print("EP%d, train_loss=%.3f, train_OA=%.2f, train_Kappa=%.3f, validate_loss=%.3f, validate_OA=%.2f, validate_Kappa=%.3f"
               % (epoch,train_loss, train_OA, train_kappa,valid_loss, valid_OA, valid_kappa))
 
@@ -253,7 +254,7 @@ class SBERTFineTuner:
 
         return valid_loss, valid_OA, valid_kappa
 
-    def test(self, data_loader, fold, type):
+    def test(self, data_loader, type):
         with torch.no_grad():
             self.model.eval()
 
@@ -295,11 +296,12 @@ class SBERTFineTuner:
             test_AA = average_accuracy(matrix)
 
             # Save the reults to file 
-            print(f"the number of target smaples is after classification {len(class_targets)}")
-            print(f"the number of results smaples is after classification {len(class_resuls)}")
-
-            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/Outputs/targets_Test-fold-{fold}.npy', np.array(class_targets), allow_pickle=True)
-            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/Outputs/logits_Test-fold-{fold}.npy', np.array(da_result), allow_pickle=True)
+            # print(f"the number of target smaples is after classification {class_targets[0].shape}")
+            # print(f"the number of results smaples is after classification {da_result[0].shape}")
+            #   add type 
+            if type == "AllSN":
+                np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/targets_Test-Model-{self.modelId}-fold-{self.fold}.npy', np.array(class_targets), allow_pickle=True)
+                np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/logits_Test-Model-{self.modelId}-fold-{self.fold}.npy', np.array(da_result), allow_pickle=True)
             # np.save('/home/anass/plasticc/ConvBERTBandSep3DCNN/class_resuls1.npy', np.array(class_resuls), allow_pickle=True)
 
             # Plot the conf matrixes 
@@ -310,11 +312,11 @@ class SBERTFineTuner:
             dclasses = np.array(['AGN', 'SNIa', 'Variable', 'SNautre'])
             #dclasses = np.array(['AGN', 'SN', 'Variable'])
 
-            plot_confusion_matrix(matrix, dclasses, normalize=True, figureName=f'FourClassesPercent-fold-{fold}-{type}')
+            plot_confusion_matrix(matrix, dclasses, normalize=True, figureName=f'FourClassesPercent-Model-{self.modelId}-fold-{self.fold}-{type}')
             self.writer.add_figure(f'FourClassesPercent-fold-{fold}', fig)
             self.writer.close()
 
-            plot_confusion_matrix(matrix, dclasses, normalize=False, figureName=f'FourClassesNumber-fold-{fold}-{type}')
+            plot_confusion_matrix(matrix, dclasses, normalize=False, figureName=f'FourClassesNumber-Model-{self.modelId}-fold-{self.fold}-{type}')
       
 
 
@@ -323,7 +325,7 @@ class SBERTFineTuner:
         return test_OA, test_kappa, test_AA, f1_score
 
     def save(self, epoch, file_path):
-        output_path = file_path +  f"checkpoint-fold-{self.fold}.tar"
+        output_path = file_path +  f"checkpoint-Model-{self.modelId}-fold-{self.fold}.tar"
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.model.state_dict(),
@@ -334,7 +336,7 @@ class SBERTFineTuner:
         return output_path
 
     def load(self, file_path):
-        input_path = file_path + f"checkpoint-fold-{self.fold}.tar"
+        input_path =  file_path +  f"checkpoint-Model-{self.modelId}-fold-{self.fold}.tar"
 
         checkpoint = torch.load(input_path)
         self.model.load_state_dict(checkpoint['model_state_dict'])

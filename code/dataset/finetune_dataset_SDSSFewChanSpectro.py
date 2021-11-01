@@ -125,7 +125,7 @@ class FinetuneDataset(Dataset):
        
 
         #   sepcify the weight 1 if the objecti specto confirmed 0.5 if not 
-        weight_obt = 0.75
+        weight_obt = 0.7
         confirmed_obt = ['AGN', 'SNIa', 'SNIa?', 'SLSN', 'SNIc', 'Variable', 'SNII', 'SNIb']
         if object['label'] in confirmed_obt:
             weight_obt = 1
