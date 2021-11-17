@@ -13,6 +13,8 @@ from einops import rearrange
 import torch.nn as nn
 import glob 
 import json
+
+# from code.finetuning import FineTune_Path
 # import skvideo.io
 x = torch.randn(64 , 1, 10)
 y = torch.randn(64 , 1, 10)
@@ -86,10 +88,10 @@ z = torch.cat((x,y),1)
 
 # h, w = conv_output_shape(h_w=h, kernel_size=3, stride=1, pad=0, dilation=1)
  
-# print(121//4)
-import json 
-allfiles = glob.glob('/home/barrage/anass/sentinel/S2-2017-T31TFM-PixelPatch/s2-2017-IGARSS-NNI-NPY/DATA/*.npy')
-np.random.shuffle(allfiles)
+# # print(121//4)
+# import json 
+# allfiles = glob.glob('/home/barrage/anass/sentinel/S2-2017-T31TFM-PixelPatch/s2-2017-IGARSS-NNI-NPY/DATA/*.npy')
+# np.random.shuffle(allfiles)
 
 # for i in range(10):
 # #     # print(int(allfiles[i].split('/')[-1].split('.')[0]))
@@ -117,7 +119,7 @@ np.random.shuffle(allfiles)
 
 # L = [data['label_44class']]
 # u_value = set( val for dic in L for val in dic.values())
-# # print(len(u_value))
+# # print(u_value))
 # X = np.load('/home/barrage/anass/sentinel/S2-2017-T31TFM-PixelPatch/s2-2017-IGARSS-NNI-NPY/DATA/1.npy')
 # print(X.shape)
 # X[1,1]=0
@@ -126,7 +128,7 @@ np.random.shuffle(allfiles)
 # print(X[1,2])
 
 
-# # print(len(allfiles))
+# # print(allfiles))
 # # print(data)
 # list =[] # create empty list
 # for val in data['label_19class'].values(): 
@@ -134,7 +136,7 @@ np.random.shuffle(allfiles)
 #     continue 
 #   else:
 #     list.append(val)
-# # print(len(list))
+# # print(list))
 # classes = {0:0, 1:1, 2:2, 4:3, 5:4, 6:5, 7:6, 8:7, 10:8, 11:9, 12:10, 13:11, 14:12, 15:13, 16:14, 17:15, 18:16}
 # print(classes[8])
 
@@ -168,7 +170,6 @@ np.random.shuffle(allfiles)
 #                                        configs[3]))*(position / np.power(10000, 2 * (hid_j // 2) / num_hidden)) for hid_j in range(num_hidden)]
 #             return torch.stack(return_list, dim=0)
 #         sinusoid_table = [get_position_angle_vec(pos_i) for pos_i in range(configs[4])]
-#         # TODO FIxe the problem Here 
 
 #         sinusoid_table = torch.stack(sinusoid_table, dim=0)
 
@@ -228,16 +229,16 @@ np.random.shuffle(allfiles)
 
 # print(pickle_file)
 
-import pandas as pd
-import pickle5 as pickle
-# object = pd.read_pickle(r'/home/barrage/anass/sdss/v3/stamps_v3/sdss_000679_32pix.pickle')
-with open('/home/barrage/anass/sdss/v3/stamps_v3/sdss_000714_32pix.pickle', "rb") as fh:
-    object = pickle.load(fh)
-from astropy.table import Table
+# import pandas as pd
+# import pickle5 as pickle
+# # object = pd.read_pickle(r'/home/barrage/anass/sdss/v3/stamps_v3/sdss_000679_32pix.pickle')
+# with open('/home/barrage/anass/sdss/v3/stamps_v3/sdss_000714_32pix.pickle', "rb") as fh:
+#     object = pickle.load(fh)
+# from astropy.table import Table
 
-all_transients = Table.read('/home/barrage/anass/sdss/master_data.fits')
-var =all_transients[all_transients['CID']==679]['RA'] 
-print(float(var))
+# all_transients = Table.read('/home/barrage/anass/sdss/master_data.fits')
+# var =all_transients[all_transients['CID']==679]['RA'] 
+# print(float(var))
 # print(np.unique(object['mjd'].astype(int)))
 
 # sequnce  = np.zeros((104, 5))
@@ -277,7 +278,7 @@ print(float(var))
 # print(BandedSeq.)
 
 # alldata = glob.glob('/home/barrage/anass/sdss/v3/stamps_v3/*.pickle')
-# print(len(alldata))
+# print(alldata))
 # from astropy.coordinates import SkyCoord
 # from dustmaps.sfd import SFDQuery
 # import dustmaps.sfd
@@ -289,8 +290,83 @@ print(float(var))
 # sfd = SFDQuery()
 # ebv = sfd(coords)
 
-# print(f'This is the ebv {ebv}')
+# # print(f'This is the ebv {ebv}')
 
-var = "thistest"
+# var = "thistest"
 
-print(f'print this {var}')
+# print(f'print this {var}')
+
+from astropy.table import Table
+
+def getKeysByValue(dictOfElements, valueToFind):
+    listOfKeys = list()
+    listOfItems = dictOfElements.items()
+    for item  in listOfItems:
+        if item[1] == valueToFind:
+            listOfKeys.append(item[0])
+    # print('This is dic ')
+    # print(listOfKeys)  
+    return  listOfKeys
+
+    
+def get_id_label(meta_path):
+    dict_id_label = {}
+    all_transients = Table.read(meta_path)
+    for transient in all_transients :
+        if str(transient['Classification']) == 'Unknown': continue #we exclude Unknown from our dataset 
+        non_supernova =['AGN', 'Unknown', 'Variable']
+        train_snII = ['pSNII', 'pSNIbc','zSNII','zSNIbc']
+        train_snIa = ['pSNIa','zSNIa']
+        Valid_snIa = ['SNIa?','SNIa']
+        # print(str(transient['Classification']))
+        if str(transient['Classification']) in non_supernova:
+            dict_id_label[int(transient['CID'])] = str(transient['Classification'])
+        elif str(transient['Classification']) in train_snII:
+            dict_id_label[int(transient['CID'])] = 'TrainSNII'
+        elif str(transient['Classification']) in train_snIa:
+            dict_id_label[int(transient['CID'])] = 'TrainSNIa'
+        elif str(transient['Classification']) in Valid_snIa:
+            dict_id_label[int(transient['CID'])] = 'ValidSNIa'
+        else :
+            dict_id_label[int(transient['CID'])] = 'ValidSNII'
+    # print('This is dic ')
+    # print(dict_id_label)        
+    return dict_id_label
+
+
+ids_label_dict = get_id_label('/home/barrage/anass/sdss/master_data.fits')
+AGNs = getKeysByValue(ids_label_dict,'AGN')
+Variable = getKeysByValue(ids_label_dict,'Variable')
+SNII = getKeysByValue(ids_label_dict,'TrainSNII')
+SNIa =getKeysByValue(ids_label_dict,'TrainSNIa')
+SpectoSNIa =getKeysByValue(ids_label_dict,'ValidSNIa')
+SpectoSNII = getKeysByValue(ids_label_dict,'ValidSNII')
+random.shuffle(AGNs)
+random.shuffle(Variable)
+random.shuffle(SNII)
+random.shuffle(SNIa)
+random.shuffle(SpectoSNIa)
+random.shuffle(SpectoSNII)
+
+AGNs.remove(13651)
+
+Train_AGN = AGNs[:int(len(AGNs)/2)] + AGNs[:int(len(AGNs)/2)] 
+FineTune_AGN = AGNs[int(len(AGNs)/2):] + AGNs[int(len(AGNs)/2):]  
+
+SSNIa = SpectoSNIa + SpectoSNIa
+SSNII = SpectoSNII +SpectoSNII +SpectoSNII 
+
+
+Train_set = Train_AGN + Variable[:int(len(Variable)/2)]+ Variable[:int(len(Variable)/2)] + SNII + SNIa + SNII + SNIa
+FineTune_set = FineTune_AGN + Variable[int(len(Variable)/2):]+ Variable[int(len(Variable)/2):] + SSNIa + SSNII
+# data_stat = {'Class':['AGNs', 'Variable', 'SNII', 'SNIa'], 'Samples':[Train_AGN, Variable[:int(len(Variable)/2)], SNII, SNIa]}
+# data_stat_FineTune = {'Class':['AGNs', 'Variable', 'SNII', 'SNIa'], 'Samples':[FineTune_AGN, Variable[int(len(Variable)/2):], SpectoSNIa, SpectoSNII]}
+
+df_stat = pd.DataFrame.from_dict({'smaples':Train_set})
+df_fineTune  =  pd.DataFrame.from_dict({'smaples':FineTune_set})
+
+df_stat.to_csv('/home/barrage/plasticc/plasticc/ConvBERTBandSep3DCNNReguWeigthedFineTune/code/train_data_Oversample.csv',index=False)
+df_fineTune.to_csv('/home/barrage/plasticc/plasticc/ConvBERTBandSep3DCNNReguWeigthedFineTune/code/FineTune_data_Oversample.csv',index=False)
+
+print(len(FineTune_set))
+print(f'This is the number of each class, AGNs={len(Train_AGN)}, Variables={len( Variable[:int(len(Variable)/2)])}, SNIa={len(SNIa)}, SNII ={len(SNII)}, SpectoSNIa={len(SSNIa)}, SpectoSNII={len(SSNII)} ')

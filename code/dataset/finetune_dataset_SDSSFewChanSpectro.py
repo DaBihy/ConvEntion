@@ -53,16 +53,11 @@ class FinetuneDataset(Dataset):
         self.seq_len = seq_len
         self.classes = classes
 
-        if Transform:
-            lis = list_IDs
-            random.shuffle(lis)
-            self.list_IDs = list_IDs + lis
-            self.TS_num = len(self.list_IDs)
-            self.half_item = self.TS_num//2
-        else:
-            self.list_IDs = list_IDs 
-            self.TS_num = len(self.list_IDs)
-            self.half_item = self.TS_num
+       
+        self.list_IDs = list_IDs
+        self.TS_num = len(self.list_IDs)
+        # self.half_item = self.TS_num//2
+
 
         self.path_dat = path_dat
        
@@ -81,8 +76,8 @@ class FinetuneDataset(Dataset):
         except:
             return None
 
-        if object['images'].shape[0]<self.seq_len and item > self.half_item:
-            return None
+        # if object['images'].shape[0]<self.seq_len and item > self.half_item:
+            # return None
             
         if object['label'] == 'Unknown':
             return None
@@ -109,7 +104,7 @@ class FinetuneDataset(Dataset):
              
         type_aug = randint(0, 1)
         if type_aug == 0:
-            BandedSeq = RandomRotation(BandedSeq, degrees=20)
+            BandedSeq = RandomRotation(BandedSeq, degrees=15)
         else:
             BandedSeq = SeqFlip(BandedSeq)
 
@@ -125,7 +120,7 @@ class FinetuneDataset(Dataset):
        
 
         #   sepcify the weight 1 if the objecti specto confirmed 0.5 if not 
-        weight_obt = 0.7
+        weight_obt = 1
         confirmed_obt = ['AGN', 'SNIa', 'SNIa?', 'SLSN', 'SNIc', 'Variable', 'SNII', 'SNIb']
         if object['label'] in confirmed_obt:
             weight_obt = 1

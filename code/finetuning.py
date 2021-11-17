@@ -1,3 +1,4 @@
+from typing import Counter
 import torch
 from torch.utils.data import DataLoader
 from model import SBERT
@@ -70,7 +71,7 @@ def Config():
 
     parser.add_argument(
         "--accur_path",
-        default='/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/CSVStats/',
+        default='/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/CSVStats/stats.csv',
         type=str,
         required=False,
         help="The path for saving the rsults of the metrics",
@@ -84,14 +85,14 @@ def Config():
     )
     parser.add_argument(
         "--pretrain_path",
-        default="/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/checkpoints/TrainGroups-64-07/",
+        default="/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/checkpoints/TrainGroupsFineTuneLossWeight-256-1/",
         type=str,
         required=False,
         help="The storage path of the pre-trained model.",
     )
     parser.add_argument(
         "--finetune_path",
-        default='/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/checkpoints/TrainGroups-64-07/',
+        default='/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/checkpoints/TrainGroupsFineTuneLossWeight-256-1/',
         type=str,
         required=False,
         help="The output directory where the fine-tuning checkpoints will be written.",
@@ -123,13 +124,13 @@ def Config():
     )
     parser.add_argument(
         "--batch_size",
-        default=64,
+        default=256,
         type=int,
         help="",
     )
     parser.add_argument(
         "--hidden_size",
-        default=[64, 8, 9, 9, 99//3],
+        default=[256, 8, 9, 9, 99//3],
         type=int,
         help="",
     )
@@ -173,72 +174,23 @@ def Config():
 
 if __name__ == "__main__":
     config = Config()
-
-
     #classes = {'AGN':0, 'SLSN':1, 'SNII':1, 'SNIa':1, 'SNIa?':1, 'SNIb':1, 'SNIc':1, 
     #'Variable':2, 'pSNII':1, 'pSNIa':1, 'pSNIbc':1, 'zSNII':1,
     # 'zSNIa':1, 'zSNIbc':1}
    
-    
     # Generating data loaders 
-    ids_label_dict = get_id_label('/home/barrage/anass/sdss/master_data.fits')
-    AGNs = getKeysByValue(ids_label_dict,'AGN')
-    Variable = getKeysByValue(ids_label_dict,'Variable')
-    SNII = getKeysByValue(ids_label_dict,'TrainSNII')
-    SNIa =getKeysByValue(ids_label_dict,'TrainSNIa')
-    SpectoSNIa =getKeysByValue(ids_label_dict,'ValidSNIa')
-    SpectoSNII = getKeysByValue(ids_label_dict,'ValidSNII')
-    random.shuffle(AGNs)
-    random.shuffle(Variable)
-    random.shuffle(SNII)
-    random.shuffle(SNIa)
-    random.shuffle(SpectoSNIa)
-    random.shuffle(SpectoSNII)
+    Train_path = '/home/barrage/plasticc/plasticc/ConvBERTBandSep3DCNNReguWeigthedFineTune/code/train_data_Oversample.csv'
+    FineTune_Path = '/home/barrage/plasticc/plasticc/ConvBERTBandSep3DCNNReguWeigthedFineTune/code/FineTune_data_Oversample.csv'
 
-    # print(f'this is agn shape {AGNs}')
-    TrainAGN = AGNs[:int(len(AGNs) * .90)]
-    TestAGN = AGNs[int(len(AGNs) * .90):]
-
-    TrainVariable = Variable[:int(len(Variable) * .90)]
-    TestVariable = Variable[int(len(Variable) * .90):]
-
-    TrainSNII =  SNII[:int(len(SNII) * .90)]
-    TestSNII = SNII[int(len(SNII) * .90):]
-
-    TrainSNs = TrainSNII + SNIa + SpectoSNIa[:int(len(SpectoSNIa)/2)] + SpectoSNII[:int(len(SpectoSNII)/2)]
-
-    All_data = TrainAGN + TrainVariable + TrainSNs
-
-
-    test_data =TestAGN + TestVariable + SpectoSNIa[int(len(SpectoSNIa)/2):] + SpectoSNII[int(len(SpectoSNII)/2):] + TestSNII
-
-    test_data2 =TestAGN + TestVariable + SpectoSNIa[int(len(SpectoSNIa)/2):] + SpectoSNII[int(len(SpectoSNII)/2):]
-
-    test_data3 =TestAGN + TestVariable + SpectoSNIa[int(len(SpectoSNIa)/2):] + TestSNII
-
-
-    test_data.remove(13651)
-    test_data2.remove(13651)
-    test_data3.remove(13651)
+    list_data_train = pd.read_csv(Train_path)['smaples']
+    list_data_FineTune = pd.read_csv(FineTune_Path)['smaples']
 
     # Configuration options
-    k_folds = 4
+    k_folds = 5
 
 #   Dataframes to store the stats 
     accuu = {'Model_Name':[], 'OAccuracy':[], 'AAccuracy':[], 'F1Score':[]}
-    deep_accu = {'Fold':[], 'AvgOAccuracy':[],
-        'VarOAccuracy':[], 'AvgAAccuracy':[], 'VarAAccuracy':[],'AvgF1Score':[],'VarF1Score':[] }
-
-
     df_accuracies_All =  pd.DataFrame.from_dict(accuu)
-    df_Deep_accuracies_All =  pd.DataFrame.from_dict(deep_accu)
-
-    df_accuracies_Conf =  pd.DataFrame.from_dict(accuu)
-    df_Deep_accuracies_Conf =  pd.DataFrame.from_dict(deep_accu)
-
-    df_accuracies_Unconf =  pd.DataFrame.from_dict(accuu)
-    df_Deep_accuracies_Unconf =  pd.DataFrame.from_dict( deep_accu)
-
   
     torch.manual_seed(42)
 
@@ -247,20 +199,17 @@ if __name__ == "__main__":
      'Variable':2, 
      'pSNIbc':3, 'zSNII':3, 'zSNIbc':3 ,'SLSN':3,  'SNIb':3,'pSNII':3, 'SNIc':3,'SNII':3}
 
+    class_weigth_train = [2.10674779, 1.31526243, 0.59054264, 0.93312102]
+    class_weigth_fine = [1.5115894,  1.26805556, 0.42465116, 5.12921348]
+
     print("Loading Data sets...")
-    train_dataset = FinetuneDataset(config.file_path, config.labels_path,
-     classes=classes, seq_len=config.max_length, list_IDs=All_data, Transform=True)
+    # train_dataset = FinetuneDataset(config.file_path, config.labels_path,
+    #  classes=classes, seq_len=config.max_length, list_IDs=list_data_train, Transform=True)
 
-    test_dataset = FinetuneDataset(config.file_path, config.labels_path, 
-    classes=classes, seq_len=config.max_length, list_IDs=test_data)
+    # fineTune_dataset = FinetuneDataset(config.file_path, config.labels_path,
+    #  classes=classes, seq_len=config.max_length, list_IDs=list_data_FineTune, Transform=True)
 
-    test_dataset2 = FinetuneDataset(config.file_path, config.labels_path, 
-    classes=classes, seq_len=config.max_length, list_IDs=test_data2)
-
-    test_dataset3 = FinetuneDataset(config.file_path, config.labels_path, 
-    classes=classes, seq_len=config.max_length, list_IDs=test_data3)
-    print("training samples: %d, testing samples: %d" %
-        (train_dataset.TS_num, test_dataset.TS_num))
+    print(f'Number of training sampls: {len(list_data_train)} and Number of fineTune samples : {len(list_data_FineTune)} ')
 
     # Define the K-fold Cross Validator
     kfold = KFold(n_splits=k_folds, shuffle=True)
@@ -269,137 +218,126 @@ if __name__ == "__main__":
     print('--------------------------------')
 
     # K-fold Cross Validation model evaluation
-
-    for fold, (train_ids, valid_ids) in enumerate(kfold.split(train_dataset)):
-
-
+    for fold, ((train_ids, valid_ids), (train_ids_fine, valid_ids_fine)) in enumerate(zip(kfold.split(list_data_train), kfold.split(list_data_FineTune))):
         # Print
         print(f'FOLD {fold}')
         print('--------------------------------')
+        train_weights = [11.0619469 ,  6.90607735 , 3.10077519,  4.89955904]
+        # train_weights = [7.0619469 ,  6.90607735 , 3.10077519,  4.89955904]
+        sample_train_weights= [0]*len(train_ids)
+        fine_weights = [11.03752759,  9.25925926,  3.10077519, 37.45318352]
+        # fine_weights = [3.03752759,  6.25925926,  3.10077519, 15.45318352]
+        # fine_weights =[0.00110375, 0.00092593, 0.00031008, 0.00374532]
+        sample_fine_weights= [0]*len(train_ids_fine)
 
-        # collecting stats
-      
-        accuracies_All = pd.DataFrame.from_dict(accuu)
-        accuracies_Conf =  pd.DataFrame.from_dict(accuu)
-        accuracies_Unconf =  pd.DataFrame.from_dict(accuu)
+        train_dataset = FinetuneDataset(config.file_path, config.labels_path,
+        classes=classes, seq_len=config.max_length, list_IDs=list(list_data_train[train_ids]), Transform=True)
 
+        valid_train_dataset = FinetuneDataset(config.file_path, config.labels_path,
+        classes=classes, seq_len=config.max_length, list_IDs=list(list_data_train[valid_ids]), Transform=True)
+
+        fineTune_dataset = FinetuneDataset(config.file_path, config.labels_path,
+        classes=classes, seq_len=config.max_length, list_IDs=list(list_data_FineTune[train_ids_fine]), Transform=True)
+
+        valid_fineTune_dataset = FinetuneDataset(config.file_path, config.labels_path,
+        classes=classes, seq_len=config.max_length, list_IDs=list(list_data_FineTune[valid_ids_fine]), Transform=True)
+        
+        # for idx , data in enumerate(train_dataset):
+        #     sample_train_weights[idx] = train_weights[data['class_label']]
+
+        for idx , data in enumerate(fineTune_dataset):
+            sample_fine_weights[idx] = fine_weights[data['class_label']]
 
         # Sample elements randomly from a given list of ids, no replacement.
-        train_subsampler = torch.utils.data.SubsetRandomSampler(train_ids)
-        valid_subsampler = torch.utils.data.SubsetRandomSampler(valid_ids)
+        # train_subsampler = torch.utils.data.WeightedRandomSampler(sample_train_weights, len(sample_train_weights), replacement=True)
+#         valid_subsampler = torch.utils.data.SubsetRandomSampler(valid_ids)
+        train_subsampler_fine = torch.utils.data.WeightedRandomSampler(sample_fine_weights, len(sample_fine_weights), replacement=True)
+#         valid_subsampler_fine = torch.utils.data.SubsetRandomSampler(valid_ids_fine)
   
         def collate_fn(batch):
             batch = list(filter(lambda x: x is not None, batch))
             return torch.utils.data.dataloader.default_collate(batch)
         
         print("Creating Dataloader...")
-        train_data_loader = DataLoader(train_dataset,sampler=train_subsampler,
+        # train_data_loader = DataLoader(train_dataset,sampler=train_subsampler,
+        #                             batch_size=config.batch_size, drop_last=False,
+        #                                 collate_fn=collate_fn, num_workers=12 )
+
+        train_data_loader = DataLoader(train_dataset, shuffle=True,
+                                    batch_size=config.batch_size, drop_last=False,
+                                    collate_fn=collate_fn, num_workers=12 )
+
+        valid_data_loader = DataLoader(valid_train_dataset, shuffle=True,
+                                    batch_size=config.batch_size, drop_last=False,
+                                    collate_fn=collate_fn, num_workers=12 )
+
+        train_data_loader_fine = DataLoader(fineTune_dataset,sampler=train_subsampler_fine,
                                     batch_size=config.batch_size, drop_last=False,
                                         collate_fn=collate_fn, num_workers=12 )
-        valid_data_loader = DataLoader(train_dataset, sampler=valid_subsampler,
+
+        # train_data_loader_fine = DataLoader(fineTune_dataset, shuffle=True,
+        #                             batch_size=config.batch_size, drop_last=False,
+        #                             collate_fn=collate_fn, num_workers=12 )
+
+        valid_data_loader_fine = DataLoader(valid_fineTune_dataset, shuffle=True,
                                     batch_size=config.batch_size, drop_last=False,
                                     collate_fn=collate_fn, num_workers=12 )
         
-        test_data_loader = DataLoader(test_dataset, shuffle=False,
-                                    batch_size=config.batch_size, drop_last=False,
-                                    collate_fn=collate_fn, num_workers=12 )
-        test_data_loader2 = DataLoader(test_dataset2, shuffle=False,
-                                    batch_size=config.batch_size, drop_last=False,
-                                    collate_fn=collate_fn, num_workers=12 ) 
-        test_data_loader3 = DataLoader(test_dataset3, shuffle=False,
-                                    batch_size=config.batch_size, drop_last=False,
-                                    collate_fn=collate_fn, num_workers=12 ) 
-
-
-        # all the tHree models 
-
-        print("Initialing The models...")
-        sbert = SBERT( hidden=config.hidden_size, n_layers=config.layers,
-                    attn_heads=config.attn_heads, dropout=config.dropout)
-
-        sbert1 = SBERT( hidden=config.hidden_size, n_layers=config.layers,
-                    attn_heads=config.attn_heads, dropout=config.dropout)
-
-        sbert2 = SBERT( hidden=config.hidden_size, n_layers=config.layers,
-                    attn_heads=config.attn_heads, dropout=config.dropout)
-
+        for data in train_data_loader_fine:
+            count = Counter(data["class_label"].squeeze().numpy())
+            print(f'AGNs:{count[0]}, SNIa:{count[1]}, Variables:{count[2]}, SNII:{count[3]}')
       
+        # all the three models 
+        # print("Initialing The models...")
+        # sbert = SBERT( hidden=config.hidden_size, n_layers=config.layers,
+        #             attn_heads=config.attn_heads, dropout=config.dropout)
+
+        # # The trainers for each model 
+        # print("Creating Downstream Task Trainer...")
+        # trainer = SBERTFineTuner(sbert, config.num_classes,
+        #                         train_dataloader=train_data_loader,
+        #                         valid_dataloader=valid_data_loader,
+        #                         lr=config.learning_rate,fold=fold, 
+        #                         modelId=0, weights=class_weigth_train)
+
+        # print("Training ConvBERT...")
+        # OAAccuracy = 0
+        # for epoch in range(config.epochs):
+        #     # Train first model
+        #     train_OA, _, valid_OA, _ = trainer.train(epoch, config.epochs)
+        #     if OAAccuracy < valid_OA:
+        #         OAAccuracy = valid_OA
+        #         trainer.save(epoch, config.finetune_path)
+
+        # print("Loading pre-trained model parameters...")
+        # sbert1 = SBERT( hidden=config.hidden_size, n_layers=config.layers,
+        #             attn_heads=config.attn_heads, dropout=config.dropout)
+        # sbert_path = config.finetune_path + f"checkpoint-Model-0-fold-{fold}.bert.pth"  
+        # sbert1.load_state_dict(torch.load(sbert_path))
+        # for param in sbert1.parameters():
+        #     param.requires_grad = False
         
-#       The trainers for each model 
-        print("Creating Downstream Task Trainer...")
-        trainer = SBERTFineTuner(sbert, config.num_classes,
-                                train_dataloader=train_data_loader,
-                                valid_dataloader=valid_data_loader,lr=config.learning_rate,fold=fold, modelId=0)
+        # print("Creating Downstream Task Fine Tuner...")
+        # trainer1 = SBERTFineTuner(sbert1, config.num_classes,
+        #                         train_dataloader=train_data_loader_fine,
+        #                         valid_dataloader=valid_data_loader_fine,
+        #                         lr=config.learning_rate,fold=fold,
+        #                          modelId=1, preTrain=True, weights=class_weigth_fine)
         
-        trainer1 = SBERTFineTuner(sbert, config.num_classes,
-                                train_dataloader=train_data_loader,
-                                valid_dataloader=valid_data_loader,lr=config.learning_rate,fold=fold,modelId=1)
+        # print("Fine-tuning ConvBERT...")
+        # OAAccuracy = 0
+        # for epoch in range(config.epochs-20):
+        #     # Train first model
+        #     train_OA, _, valid_OA, _ = trainer1.train(epoch, config.epochs)
+        #     if OAAccuracy < valid_OA:
+        #         OAAccuracy = valid_OA
+        #         trainer1.save(epoch, config.finetune_path)
 
-        trainer2 = SBERTFineTuner(sbert, config.num_classes,
-                                train_dataloader=train_data_loader,
-                                valid_dataloader=valid_data_loader,lr=config.learning_rate,fold=fold,modelId=2)
-        
+        # print("\n\n\n")
+        # print("Testing The models...")
+        # trainer1.load(config.finetune_path)
+        # OA, Kappa, AA, f1 = trainer1.test(valid_data_loader_fine, "AllSN")
+        # df_accuracies_All = df_accuracies_All.append(pd.DataFrame.from_dict({'Model_Name':[f'Model-1-Fold-{fold}'],
+        #     'OAccuracy':[OA], 'AAccuracy':[AA], 'F1Score':[f1]}))
 
-        print("Fine-tuning ConvBERT...")
-        OAAccuracy = 0
-        OAAccuracy1 = 0
-        OAAccuracy2 = 0
-
-        for epoch in range(config.epochs):
-            # Train first model
-            train_OA, _, valid_OA, _ = trainer.train(epoch, config.epochs)
-            if OAAccuracy < valid_OA:
-                OAAccuracy = valid_OA
-                trainer.save(epoch, config.finetune_path)
-            
-            # Train second model
-            train_OA1, _, valid_OA1, _ = trainer1.train(epoch, config.epochs)
-            if OAAccuracy1 < valid_OA1:
-                OAAccuracy1 = valid_OA1
-                trainer1.save(epoch, config.finetune_path)
-
-            # Train Third model
-            train_OA2, _, valid_OA2, _ = trainer2.train(epoch, config.epochs)
-            if OAAccuracy2 < valid_OA2:
-                OAAccuracy2 = valid_OA2
-                trainer2.save(epoch, config.finetune_path)
-
-
-
-        print("\n\n\n")
-        print("Testing The models...")
-
-        for id, model in enumerate([trainer, trainer1, trainer2]):
-           
-            model.load(config.finetune_path)
-            OA, Kappa, AA, f1 = model.test(test_data_loader, "AllSN")
-            accuracies_All = accuracies_All.append(pd.DataFrame.from_dict({'Model_Name':[f'Model-{id}-Fold-{fold}'],
-             'OAccuracy':[OA], 'AAccuracy':[AA], 'F1Score':[f1]}))
-
-            OA2, Kappa2, AA2, f12 = model.test(test_data_loader2, "ConfSN")
-            accuracies_Conf=accuracies_Conf.append(pd.DataFrame.from_dict({'Model_Name':[f'Model-{id}-Fold-{fold}'], 
-            'OAccuracy':[OA2], 'AAccuracy':[AA2], 'F1Score':[f12]}))
-
-            OA3, Kappa3, AA3, f13 = model.test(test_data_loader3, "UnconfSN")
-            accuracies_Unconf= accuracies_Unconf.append(pd.DataFrame.from_dict({'Model_Name':[f'Model-{id}-Fold-{fold}'],
-             'OAccuracy':[OA3], 'AAccuracy':[AA3], 'F1Score':[f13]}))
-
-
-        df_deep = [df_Deep_accuracies_All, df_Deep_accuracies_Conf, df_Deep_accuracies_Unconf]
-        df_norm = [df_accuracies_All, df_accuracies_Conf, df_accuracies_Unconf ]
-        _nrom =  [accuracies_All, accuracies_Conf, accuracies_Unconf ]
-        df_name = ['All', 'COnf', 'Unconf']
-
-        for index, (df_deep_it, df_norm_it, _nrom_it, df_name_it) in enumerate(zip(df_deep, df_norm,_nrom, df_name)):
-            df_deep_it = df_deep_it.append(pd.DataFrame.from_dict({'Fold':[f'Fold-{fold}'],
-            'AvgOAccuracy':[np.mean(_nrom_it['OAccuracy'])],'VarOAccuracy':[np.var(_nrom_it['OAccuracy'])], 
-            'AvgAAccuracy':[np.mean(_nrom_it['AAccuracy'])], 'VarAAccuracy':[np.var(_nrom_it['AAccuracy'])],
-            'AvgF1Score':[np.mean(_nrom_it['F1Score'])],'VarF1Score':[np.var(_nrom_it['F1Score'])] }))
-            df_norm_it = df_norm_it.append(_nrom_it)
-            df_deep_it.to_csv(config.accur_path +'df_Deep_accuracies_'+df_name_it+'.csv', index=False)
-            df_norm_it.to_csv(config.accur_path +'df_accuracies_'+df_name_it+'.csv', index=False)
-
-      
-
-
-    # Save the avg of all models 
+        # df_accuracies_All.to_csv(config.accur_path, index=False)

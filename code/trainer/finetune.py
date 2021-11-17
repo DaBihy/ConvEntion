@@ -87,7 +87,7 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
     thresh = cm.max() / 2.
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
         plt.text(j, i, format(cm[i, j], fmt), horizontalalignment="center", color="white" if cm[i, j] > thresh else "black")
-    save_path = '/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/MC/'+figureName+'.png'
+    save_path = '/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/MC/'+figureName+'.png'
     plt.tight_layout()
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
@@ -105,21 +105,25 @@ class SBERTFineTuner:
     def __init__(self, sbert: SBERT, num_classes: int,
                  train_dataloader: DataLoader, valid_dataloader: DataLoader,
                  lr: float = 1e-3, with_cuda: bool = True,
-                 cuda_devices=None, log_freq: int = 100, fold=0, modelId=0):
+                 cuda_devices=None, log_freq: int = 100, fold=0, modelId=0, preTrain=False, weights=None):
 
         cuda_condition = torch.cuda.is_available() and with_cuda
         self.device = torch.device("cuda:1" if cuda_condition else "cpu")
-        self.writer = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/logs/Train-Model-{modelId}-fold-{fold}')
-        self.writer1 = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/logs/Valid-Model-{modelId}-fold-{fold}')
+        self.writer = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/logs/Train-Model-{modelId}-fold-{fold}')
+        self.writer1 = SummaryWriter(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/logs/Valid-Model-{modelId}-fold-{fold}')
         self.fold = fold
         self.sbert = sbert
         self.modelId = modelId
+        self.preTrain = preTrain
+
         gc.collect()
         torch.cuda.empty_cache()
         
         self.model = SBERTClassification(sbert, num_classes).to(self.device)
         # Reset the weight of the model after each fold 
-        self.model.apply(reset_weights)
+        if self.preTrain==False: 
+            print("reseting weights...")
+            self.model.apply(reset_weights)
 
         # calculate the number of parameters in the model 
         param = filter(lambda p: p.requires_grad, self.model.parameters())
@@ -129,27 +133,26 @@ class SBERTFineTuner:
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.3, amsgrad=True)
         self.scheduler = lr_scheduler.ReduceLROnPlateau(self.optim, patience=8, factor=0.5, verbose=True)
 
-        preTrain = None
         
-
         self.num_classes = num_classes
 
         if with_cuda and torch.cuda.device_count() > 1:
             print("Using %d GPUs for model fine-tuning" % torch.cuda.device_count())
-            self.model = nn.DataParallel(self.model, device_ids=[1])
+            self.model = nn.DataParallel(self.model, device_ids=[1,2,3])
 
         self.train_dataloader = train_dataloader
         self.valid_dataloader = valid_dataloader
        
+        # TODO add class weights to the focal loss here 
 
-        self.criterion = FocalLoss()
+        self.criterion = FocalLoss(weight=torch.FloatTensor(weights).to(self.device))
 
-        if preTrain is not None:
-            print("Loading pre-trained model parameters...")
-            sbert_path = "/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/checkpoints-2/finetune2checkpoint.tar"
-            checkpoint = torch.load(sbert_path)
-            self.model.load_state_dict(checkpoint['model_state_dict'])
-            self.optim.load_state_dict(checkpoint['optimizer_state_dict'])
+        # if preTrain is not None:
+        #     print("Loading pre-trained model parameters...")
+            # sbert_path = "/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/checkpoints-2/finetune2checkpoint.tar"
+            # checkpoint = torch.load(sbert_path)
+            # self.model.load_state_dict(checkpoint['model_state_dict'])
+            # self.optim.load_state_dict(checkpoint['optimizer_state_dict'])
         # self.criterion = nn.CrossEntropyLoss()
         self.log_freq = log_freq
 
@@ -171,7 +174,7 @@ class SBERTFineTuner:
             classification_target = data["class_label"].squeeze()
 
             if epoch == epochs-1:
-                print(f'This is the shape {classification_target.shape}')
+                # print(f'This is the shape {classification_target.shape}')
                 class_targets.append(classification_target.cpu().detach().numpy())
                 da_result.append(classification.cpu().detach().numpy())
 
@@ -202,10 +205,10 @@ class SBERTFineTuner:
         valid_loss, valid_OA, valid_kappa = self._validate()
         #self.scheduler.step(valid_loss)
         if epoch == epochs-1:
-            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/targets_Train-Model-{self.modelId}-fold-{self.fold}.npy', np.array(class_targets), allow_pickle=True)
-            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/logits_Train-Model-{self.modelId}-fold-{self.fold}.npy', np.array(da_result), allow_pickle=True)
-        print("EP%d, train_loss=%.3f, train_OA=%.2f, train_Kappa=%.3f, validate_loss=%.3f, validate_OA=%.2f, validate_Kappa=%.3f"
-              % (epoch,train_loss, train_OA, train_kappa,valid_loss, valid_OA, valid_kappa))
+            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/OutputsGroups/targets_Train-Model-{self.modelId}-fold-{self.fold}.npy', np.array(class_targets), allow_pickle=True)
+            np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/OutputsGroups/logits_Train-Model-{self.modelId}-fold-{self.fold}.npy', np.array(da_result), allow_pickle=True)
+        # print("EP%d, train_loss=%.3f, train_OA=%.2f, train_Kappa=%.3f, validate_loss=%.3f, validate_OA=%.2f, validate_Kappa=%.3f"
+        #       % (epoch,train_loss, train_OA, train_kappa,valid_loss, valid_OA, valid_kappa))
 
         self.writer.add_scalar('Loss', train_loss, global_step=epoch)
         self.writer1.add_scalar('Loss', valid_loss, global_step=epoch)
@@ -300,8 +303,8 @@ class SBERTFineTuner:
             # print(f"the number of results smaples is after classification {da_result[0].shape}")
             #   add type 
             if type == "AllSN":
-                np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/targets_Test-Model-{self.modelId}-fold-{self.fold}.npy', np.array(class_targets), allow_pickle=True)
-                np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainLogsGroups-64-07/OutputsGroups/logits_Test-Model-{self.modelId}-fold-{self.fold}.npy', np.array(da_result), allow_pickle=True)
+                np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/OutputsGroups/targets_Test-Model-{self.modelId}-fold-{self.fold}.npy', np.array(class_targets), allow_pickle=True)
+                np.save(f'/home/barrage/anass/ConvBERTSparseSDSSResultsRegulWeighted/TrainGroupsFineTuneLossWeight-256-1/OutputsGroups/logits_Test-Model-{self.modelId}-fold-{self.fold}.npy', np.array(da_result), allow_pickle=True)
             # np.save('/home/anass/plasticc/ConvBERTBandSep3DCNN/class_resuls1.npy', np.array(class_resuls), allow_pickle=True)
 
             # Plot the conf matrixes 
@@ -332,7 +335,10 @@ class SBERTFineTuner:
             'optimizer_state_dict': self.optim.state_dict(),
         }, output_path)
 
-        print("EP:%d Model Saved on:" % epoch, output_path)
+        bert_path = file_path + f"checkpoint-Model-{self.modelId}-fold-{self.fold}.bert.pth"  
+        torch.save(self.sbert.state_dict(), bert_path)
+
+        # print("EP:%d Model Saved on:" % epoch, output_path)
         return output_path
 
     def load(self, file_path):
@@ -346,3 +352,4 @@ class SBERTFineTuner:
 
         print("EP:%d Model loaded from:" % epoch, input_path)
         return input_path
+
