@@ -12,7 +12,6 @@ class SublayerConnection(nn.Module):
     def __init__(self, size, dropout):
         super(SublayerConnection, self).__init__()
         self.norm =  nn.LayerNorm(size[1:])
-        # self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, sublayer):
         "Apply residual connection to any sublayer with the same size."

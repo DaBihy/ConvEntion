@@ -1,0 +1,18 @@
+file_path: '/home/bairouk/Data/sdss/v3/stamps_v3/'
+accur_path: '/home/bairouk/ConvEntionWithZTF/stats64.csv'
+labels_path: '/home/bairouk/Data/sdss/master_data.fits'
+pretrain_path: '/home/bairouk/ConvEntionWithZTF/checkpoints/check3Class/'
+finetune_path: '/home/bairouk/ConvEntionWithZTF/checkpoints/check3Class/'
+max_length: 99
+num_features: 10
+num_classes: 3
+epochs: 50
+batch_size: 128
+hidden_size: [128, 8, 9, 9, 33]
+layers: 2
+attn_heads: 4
+learning_rate: 0.002
+dropout: 0.5
+test_rate: 0.1
+valid_rate: 0.2
+# Add any other missing configurations here...

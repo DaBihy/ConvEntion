@@ -2,7 +2,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import SubsetRandomSampler
 #chnge the spares for normal data 
-from .finetune_dataset_SDSSFewC import FinetuneDataset
+from .finetune_dataset_sdss_few_chanels import FinetuneDataset
 import torch
 
 np.random.seed(0)
@@ -37,17 +37,18 @@ class DataSetWrapper(object):
         train_sampler = SubsetRandomSampler(train_idx)
         valid_sampler = SubsetRandomSampler(valid_idx)
         test_sampler = SubsetRandomSampler(test_idx)
-        def collate_fn(batch):
-            batch = list(filter(lambda x: x is not None, batch))
-            return torch.utils.data.dataloader.default_collate(batch)
+   
 
         train_loader = DataLoader(dataset, batch_size=self.batch_size, sampler=train_sampler,
-                                  drop_last=True, num_workers=12, collate_fn=collate_fn)
-        # print(f"Isze train_loader {train_loader}")
+                                  drop_last=True, num_workers=12, collate_fn=self.collate_fn)
 
         valid_loader = DataLoader(dataset, batch_size=self.batch_size, sampler=valid_sampler,
-                                  drop_last=True, num_workers=12, collate_fn=collate_fn)
+                                  drop_last=True, num_workers=12, collate_fn=self.collate_fn)
         test_loader = DataLoader(dataset, batch_size=self.batch_size, sampler=test_sampler,
-                                  drop_last=True, num_workers=12, collate_fn=collate_fn)
+                                  drop_last=True, num_workers=12, collate_fn=self.collate_fn)
 
         return train_loader, valid_loader, test_loader
+    
+    def collate_fn(batch):
+        batch = list(filter(lambda x: x is not None, batch))
+        return torch.utils.data.dataloader.default_collate(batch)

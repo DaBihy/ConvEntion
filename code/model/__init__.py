@@ -1,2 +1,2 @@
-from .bert import SBERT
-from .classification_model import SBERTClassification
+from .conv_bert import ConvBERT
+from .classification_model import ConvBERTClassification

@@ -12,9 +12,6 @@ class PositionwiseFeedForward(nn.Module):
         self.w_2 =  nn.Conv2d(in_channels=d_ff, out_channels=d_model[1], kernel_size=3,stride=1,padding=1)
         self.conv1_bn = nn.BatchNorm2d(d_ff)
         self.conv2_bn = nn.BatchNorm2d(d_model[1])
-
-        # self.dropout = nn.Dropout(dropout)
-        # self.activation = GELU()
         self.activation = nn.ReLU()
 
     def forward(self, x):

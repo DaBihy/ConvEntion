@@ -2,8 +2,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 from einops import rearrange
-import math
-import numpy as np
 
 class Attention(nn.Module):
     """
@@ -11,7 +9,7 @@ class Attention(nn.Module):
     """
     def __init__(self,num_hidden, heads):
         super(Attention, self).__init__()
-        # self.configs = configs
+
         self.num_hidden =num_hidden
         self.heads = heads
 
@@ -26,7 +24,6 @@ class Attention(nn.Module):
         val = value.view(b,self.heads, c, h, w, l)
         Vout_list = []
         for i in range(l):
-            # s = torch.stack([query[...,i]]*l)
             Qi = rearrange(torch.stack([query[...,i]]*l, dim=-1) + key, 'b n h w l -> (b l) n h w')
             tmp = rearrange(self.conv2(Qi),'(b l) n h w -> b n h w l',l=l)
             tmp = tmp.view(b,self.heads, 1, h, w, l)

@@ -1,1 +1,1 @@
-from .finetune import SBERTFineTuner
+from .trainer import ConvBERTTrainer
