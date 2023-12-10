@@ -29,15 +29,14 @@ class PositionalEncoding(nn.Module):
         sinusoid_table[:,0::2] = np.sin(sinusoid_table[:,0::2])  # dim 2i
         sinusoid_table[:,1::2] = np.cos(sinusoid_table[:,1::2])  # dim 2i+1
 
-        posEnc = rearrange(sinusoid_table, 'l n h w  -> n h w l')
-
-
-        return posEnc
+        position_enc = rearrange(sinusoid_table, 'l n h w  -> n h w l')
+        return position_enc
+    
     def forward(self, x):
         '''
         :param x: (b, channel, h, w, seqlen)
         :return:
         '''
         batch_size, channel, h, w, seqlen = x.shape
-        PosEncoding = self.pos_table.clone().detach()
-        return x + PosEncoding[None,:,:,:,:].repeat(batch_size, 1, 1, 1, 1)
+        position_encoding = self.pos_table.clone().detach()
+        return x + position_encoding[None,:,:,:,:].repeat(batch_size, 1, 1, 1, 1)

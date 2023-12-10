@@ -126,7 +126,7 @@ class ConvBERTTrainer:
         # init the optimizer for the model  
         self.optim = AdamW(self.model.parameters(), lr=lr, weight_decay=0.1339, amsgrad=True)
         if with_cuda and torch.cuda.device_count() > 1:
-            print("Using %d GPUs for model fine-tuning" % torch.cuda.device_count())
+            print("Using %d GPUs for model training" % torch.cuda.device_count())
             self.model = nn.DataParallel(self.model, device_ids=[0,1])
 
         self.criterion = FocalLoss()

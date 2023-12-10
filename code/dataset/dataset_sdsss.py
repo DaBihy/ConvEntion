@@ -7,10 +7,10 @@ import pickle5 as pickle
 from torch.utils.data import Dataset
 from einops import rearrange
 
-class FinetuneDataset(Dataset):
+class SDSSDataset(Dataset):
     def __init__(self, data_path, labels_path, classes=None, seq_len=None):
         """
-        Initializes the dataset for fine-tuning.
+        Initializes the dataset for training.
 
         Args:
             data_path (str): Path to the data files.

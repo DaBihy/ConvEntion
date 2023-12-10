@@ -8,7 +8,7 @@ import wandb
 import yaml
 from model import ConvBERT
 from trainer import ConvBERTTrainer
-from code.dataset.finetune_dataset_ztf import ZTFDataset
+from code.dataset.train_dataset_ztf import ZTFDataset
 
 def setup_seed(seed):
     torch.manual_seed(seed)

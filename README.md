@@ -7,7 +7,7 @@ This repository contains the implementation of ConvEntion, a transformer-based m
 The repository is structured as follows:
 
 - `model/`: Contains the implementation of the ConvEntion model along with various attention mechanisms.
-- `trainer/`: Includes the training logic and loss functions used for fine-tuning the model.
+- `trainer/`: Includes the training logic and loss functions used for training the model.
 - `dataset/`: Holds the dataset wrappers and specific implementations for processing the SDSS and ZTF datasets.
 - `utils/`: Contains utility functions and layers used across the model.
 
@@ -34,11 +34,11 @@ To train the ConvEntion model on your dataset, follow these steps:
 - `training.py`: Main entry point for training the model.
 - `trainer/trainer.py`: The trainer class responsible for the training loop and validation.
 - `model/conv_bert.py`: ConvEntion model implementation.
-- `dataset/finetune_dataset_ztf.py`: Dataset class implementation for loading and preprocessing the ZTF data.
+- `dataset/train_dataset_ztf.py`: Dataset class implementation for loading and preprocessing the ZTF data.
 
 ## Model Training
 
-The training process involves initializing the ConvEntion model, creating data loaders for the training and validation sets, and iteratively fine-tuning the model on the SDSS and ZTF datasets. The `KFold` cross-validation is used to ensure the model's generalizability.
+The training process involves initializing the ConvEntion model, creating data loaders for the training and validation sets, and iteratively training the model on the SDSS and ZTF datasets. The `KFold` cross-validation is used to ensure the model's generalizability.
 
 ## Contributing
 
