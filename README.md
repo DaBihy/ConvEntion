@@ -1,4 +1,4 @@
-# ConvEntion Astronomical Classification
+# ConvEntion For Astronomical Classification
 
 This repository contains the implementation of ConvEntion, a transformer-based model, trained for the classification of astronomical objects. The model was primarily trained on data from the Sloan Digital Sky Survey (SDSS) and augmented with data from the ZTF (Zwicky Transient Facility) dataset. Our approach is detailed in the paper titled "Astronomical image time series classification using CONVolutional attENTION (ConvEntion)", available [here](https://arxiv.org/abs/2304.01236).
 
